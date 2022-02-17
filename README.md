@@ -2,7 +2,7 @@
 
 Deploy ASD via Terraform and ACM
 
-To do: add detailed instructions for deploying the sample
+#TODO: ## Add detailed instructions for deploying the sample
 
 1. Clone the repo `git clone https://github.com/kaariger/asd-poc.git` 
 1. `export TF_VAR_project=<your project id>` Set $TF_VAR_project enviornment variable to a project that has billing enabled
