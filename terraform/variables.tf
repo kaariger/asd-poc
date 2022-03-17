@@ -53,9 +53,3 @@ variable "policy_dir" {
   type        = string
   description = "the root directory in the repo branch that contains the resources."
 }
-
-variable "enable_hub_membership" {
-  type        = bool
-  default     = true
-  description = "indicates whether to create the google_gke_hub_membership resource"
-}
