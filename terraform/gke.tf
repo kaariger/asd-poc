@@ -32,9 +32,9 @@ module "enabled_google_apis" {
 
 module "gke" {
   source             = "terraform-google-modules/kubernetes-engine/google"
-  version            = "~> 19.0"
+  version            = "~> 20.0"
   project_id         = module.enabled_google_apis.project_id
-  name               = "asd-cluster-00"
+  name               = var.cluster_name
   region             = var.region
   zones              = [var.zone]
   initial_node_count = 4
@@ -56,12 +56,39 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(module.gke.ca_certificate)
 }
 
+# this is needed as a workaround due to https://github.com/terraform-google-modules/terraform-google-kubernetes-engine/issues/1181
+locals {
+  cluster_name = element(split("/", module.gke.cluster_id), length(split("/", module.gke.cluster_id)) - 1)
+}
+
 module "asm" {
-  source           = "./modules/asm"
-  project_id       = module.enabled_google_apis.project_id
-  cluster_name     = module.gke.name
-  cluster_location = module.gke.location
-  channel = "regular"
-  #  enable_cross_cluster_service_discovery = true
-  #  enable_cni                             = true
+  source                    = "terraform-google-modules/kubernetes-engine/google//modules/asm"
+  version                   = "~> 20.0"
+  project_id                = module.enabled_google_apis.project_id
+  cluster_name              = local.cluster_name
+  cluster_location          = module.gke.location
+  multicluster_mode         = "connected"
+  enable_cni                = true
+  enable_fleet_registration = true
+  enable_mesh_feature       = true
+}
+
+module "boa-secret" {
+  source = "terraform-google-modules/gcloud/google//modules/kubectl-wrapper"
+
+  project_id              = module.enabled_google_apis.project_id
+  cluster_name            = module.gke.name
+  cluster_location        = module.gke.location
+  kubectl_create_command  = "kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/main/extras/jwt/jwt-secret.yaml"
+  kubectl_destroy_command = "kubectl delete -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/main/extras/jwt/jwt-secret.yaml"
+}
+
+module "boa-istio" {
+  source = "terraform-google-modules/gcloud/google//modules/kubectl-wrapper"
+
+  project_id              = module.enabled_google_apis.project_id
+  cluster_name            = module.gke.name
+  cluster_location        = module.gke.location
+  kubectl_create_command  = "kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/main/istio-manifests/frontend-ingress.yaml"
+  kubectl_destroy_command = "kubectl delete -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/main/istio-manifests/frontend-ingress.yaml"
 }

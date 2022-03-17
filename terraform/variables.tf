@@ -29,6 +29,11 @@ variable "zone" {
   description = "the GCP zone in the region where the cluster will be created"
 }
 
+variable "cluster_name" {
+  type        = string
+  description = "the name of the Anthos cluster"
+}
+
 variable "sync_repo" {
   type        = string
   description = "git URL for the repo which will be sync'ed into the cluster via Config Management"

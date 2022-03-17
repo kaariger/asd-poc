@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-region      = "us-west4"
-zone        = "us-west4-b"
-sync_repo   = "https://github.com/kaariger/asd-poc.git"
-sync_branch = "main"
-sync_rev    = ""
-policy_dir  = "manifests"
+region       = "us-west4"
+zone         = "us-west4-b"
+cluster_name = "asd-cluster-00"
+sync_repo    = "https://github.com/GoogleCloudPlatform/bank-of-anthos"
+sync_branch  = "main"
+sync_rev     = "HEAD"
+policy_dir   = "/kubernetes-manifests"
