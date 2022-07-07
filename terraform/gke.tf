@@ -14,84 +14,44 @@
  * limitations under the License.
  */
 
-module "enabled_google_apis" {
-  source  = "terraform-google-modules/project-factory/google//modules/project_services"
-  version = "~> 11.3"
-
-  project_id                  = var.project
-  disable_services_on_destroy = false
-
-  activate_apis = [
-    "compute.googleapis.com",
-    "container.googleapis.com",
-    "gkehub.googleapis.com",
-    "anthosconfigmanagement.googleapis.com",
-    "meshconfig.googleapis.com"
-  ]
-}
-
 module "gke" {
   source             = "terraform-google-modules/kubernetes-engine/google"
-  version            = "~> 20.0"
-  project_id         = module.enabled_google_apis.project_id
+  version            = "~> 21.2"
+  project_id         = data.google_project.project.project_id
   name               = var.cluster_name
   region             = var.region
   zones              = [var.zone]
-  initial_node_count = 4
+  initial_node_count = 1
+  remove_default_node_pool = true
   network            = "default"
   subnetwork         = "default"
   ip_range_pods      = ""
   ip_range_services  = ""
+  cluster_resource_labels = {
+     "mesh_id" : "proj-${data.google_project.project.number}",
+   }
+  identity_namespace      = "${data.google_project.project.project_id}.svc.id.goog"
+
+  node_pools = [
+    {
+      name         = "asd-node-pool"
+      autoscaling  = true
+      node_count   = 3
+      min_count    = 1
+      max_count    = 10
+      auto_upgrade = true
+      machine_type = "e2-standard-2"
+    },
+  ]
 
   depends_on = [
     module.enabled_google_apis
   ]
-}
 
-data "google_client_config" "default" {}
+}
 
 provider "kubernetes" {
   host                   = "https://${module.gke.endpoint}"
   token                  = data.google_client_config.default.access_token
   cluster_ca_certificate = base64decode(module.gke.ca_certificate)
-}
-
-# this is needed as a workaround due to https://github.com/terraform-google-modules/terraform-google-kubernetes-engine/issues/1181
-locals {
-  cluster_name = element(split("/", module.gke.cluster_id), length(split("/", module.gke.cluster_id)) - 1)
-}
-
-module "asm" {
-  source                    = "terraform-google-modules/kubernetes-engine/google//modules/asm"
-  version                   = "~> 20.0"
-  project_id                = module.enabled_google_apis.project_id
-  cluster_name              = local.cluster_name
-  cluster_location          = module.gke.location
-  multicluster_mode         = "connected"
-  enable_cni                = true
-  enable_fleet_registration = true
-  enable_mesh_feature       = true
-}
-
-module "boa-secret" {
-  source = "terraform-google-modules/gcloud/google//modules/kubectl-wrapper"
-
-  project_id              = module.enabled_google_apis.project_id
-  cluster_name            = module.gke.name
-  cluster_location        = module.gke.location
-  module_depends_on       = [module.gke]
-  kubectl_create_command  = "kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/${var.sync_branch}/extras/jwt/jwt-secret.yaml"
-  kubectl_destroy_command = "kubectl delete -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/${var.sync_branch}/extras/jwt/jwt-secret.yaml"
-}
-
-module "boa-istio" {
-  source = "terraform-google-modules/gcloud/google//modules/kubectl-wrapper"
-
-  project_id        = module.enabled_google_apis.project_id
-  cluster_name      = module.gke.name
-  cluster_location  = module.gke.location
-  module_depends_on = [module.asm.wait]
-
-  kubectl_create_command  = "kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/${var.sync_branch}/istio-manifests/frontend-ingress.yaml"
-  kubectl_destroy_command = "kubectl delete -f https://raw.githubusercontent.com/GoogleCloudPlatform/bank-of-anthos/${var.sync_branch}/istio-manifests/frontend-ingress.yaml"
 }

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-region       = "us-west4"
-zone         = "us-west4-b"
-cluster_name = "asd-cluster-00"
+region       = "us-central1"
+zone         = "us-central1-b"
+cluster_name = "anthos-sample-cluster1"
 sync_repo    = "https://github.com/GoogleCloudPlatform/bank-of-anthos"
-sync_branch  = "v0.5.3"
+sync_branch  = "v0.5.5"
 sync_rev     = ""
 policy_dir   = "/kubernetes-manifests"
